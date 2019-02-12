@@ -13,11 +13,12 @@ import (
 
 type Monitor struct {
 	// reporter
-	r        report.Reporter
-	w        watch.Watcher
-	lastLive bool
-	ctx      context.Context
-	cancel   context.CancelFunc
+	r          report.Reporter
+	w          watch.Watcher
+	lastLive   bool
+	checkCount int // 无效状态的检测次数
+	ctx        context.Context
+	cancel     context.CancelFunc
 }
 
 func NewMonitor(r report.Reporter, w watch.Watcher) *Monitor {
@@ -49,7 +50,24 @@ func (m *Monitor) run() {
 		case <-timer.C:
 			live := m.w.IsLive()
 			if live != m.lastLive {
-				m.r.Report(m.getReportMsg(m.w, live))
+				m.checkCount = 1
+
+				// 状态转为有效则进行报告
+				if live {
+					m.r.Report(m.getReportMsg(m.w, live))
+				}
+			} else {
+				m.checkCount++
+
+				// 防止溢出
+				if m.checkCount > 99999999 {
+					m.checkCount = 2
+				}
+
+				// 二次检查无效，进行报告
+				if 2 == m.checkCount && !live {
+					m.r.Report(m.getReportMsg(m.w, live))
+				}
 			}
 
 			m.lastLive = live

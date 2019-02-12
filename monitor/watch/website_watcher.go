@@ -8,6 +8,10 @@ import (
 	. "github.com/argentmoon/host-monitor/log"
 )
 
+var httpClient = &http.Client {
+	Timeout: time.Second * 20,
+}
+
 // WebsiteWatcher 网站可用性监测
 type WebsiteWatcher struct {
 	name       string
@@ -33,15 +37,13 @@ func (w *WebsiteWatcher) Name() string {
 
 // IsLive 网站是否可用
 func (w *WebsiteWatcher) IsLive() (live bool) {
-	client := &http.Client{}
-
 	req, err := http.NewRequest(w.httpMethod, w.host, nil)
 	if err != nil {
 		GLog.Debugf("访问%v，%v错误：%v", w.name, w.host, err)
 		return false
 	}
 
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		GLog.Debugf("访问%v，%v错误：%v", w.name, w.host, err)
 		return false
