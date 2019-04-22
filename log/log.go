@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
+	"github.com/go-ini/ini"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +50,17 @@ func init() {
 	// Can be any io.Writer, see below for File example
 	logrus.SetOutput(os.Stdout)
 
-	// Only log the warning severity or above.
-	GLog.SetReportCaller(true)
-	GLog.SetLevel(logrus.WarnLevel)
+	cfg, err := ini.Load("config.ini")
+	if err != nil {
+		GLog.Fatal("未找到config.ini")
+	}
+
+	runMode := cfg.Section("").Key("run_mode").String()
+	fmt.Printf("run_mode = %v\n", runMode)
+	if strings.ToLower(runMode) == "debug" {
+		GLog.SetLevel(logrus.DebugLevel)
+		GLog.SetReportCaller(true)
+	} else {
+		GLog.SetLevel(logrus.InfoLevel)
+	}
 }

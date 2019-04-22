@@ -5,12 +5,19 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/argentmoon/host-monitor/utils"
+
 	. "github.com/argentmoon/host-monitor/log"
 	"github.com/argentmoon/host-monitor/monitor"
 )
 
 func main() {
-	GLog.Warn("启动监视器...")
+	isAdministrator := utils.IsAdministrator()
+	if !isAdministrator {
+		GLog.Fatal("需要以管理员模式运行！")
+	}
+
+	GLog.Info("启动监视器...")
 	monitorMgr := monitor.NewMonitorMgr()
 	monitorMgr.Load()
 	monitorMgr.Start()
