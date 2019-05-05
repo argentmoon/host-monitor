@@ -141,15 +141,24 @@ func (mm *MonitorMgr) statsJob() {
 	}
 
 	// 获取统计信息
-	statsMsgs := []string{"监测日报："}
+	statsMsgs := []string{"监测日报,异常主机："}
 	for _, m := range mm.mtl {
-		statsMsgs = append(statsMsgs, m.getStatsMsg())
+		if m.isNeedToStats() {
+			statsMsgs = append(statsMsgs, m.getStatsMsg())
+		}
 
-		// 重置
+		// 重置统计次数
 		m.resetStats()
 	}
 
-	msg := strings.Join(statsMsgs, "\n\n")
+	var msg string
+	// 有需要报告的主机
+	if len(statsMsgs) > 1 {
+		msg = strings.Join(statsMsgs, "\n\n")
+	} else {
+		msg = "监测日报：\n一切正常！"
+	}
+
 	GLog.Println(msg)
 
 	// 发送信息

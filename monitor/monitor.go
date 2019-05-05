@@ -57,6 +57,7 @@ func (m *Monitor) run() {
 			live := m.w.IsLive()
 
 			m.statsMutex.Lock()
+			lastLive := m.lastLive
 			if live {
 				m.successedCount++
 			} else {
@@ -64,7 +65,7 @@ func (m *Monitor) run() {
 			}
 			m.statsMutex.Unlock()
 
-			if live != m.lastLive {
+			if live != lastLive {
 				// 状态转为有效则进行报告
 				if live && m.invalidCheckCount >= reportCount {
 					msg := m.getReportMsg(live)
@@ -89,7 +90,9 @@ func (m *Monitor) run() {
 				}
 			}
 
+			m.statsMutex.Lock()
 			m.lastLive = live
+			m.statsMutex.Unlock()
 
 			GLog.Debugf("name:%v, live:%v", m.w.Name(), live)
 
@@ -109,17 +112,33 @@ func (m *Monitor) resetStats() {
 	m.failedCount = 0
 }
 
+// 判断是否需要列入日统计，正常对象不列为统计项目
+func (m *Monitor) isNeedToStats() bool {
+	m.statsMutex.Lock()
+	defer m.statsMutex.Unlock()
+
+	// 主机不能访问，或者失败次数太于0，则需要报告
+	return !m.lastLive || m.failedCount > 0
+}
+
 // 获得统计信息
 func (m *Monitor) getStatsMsg() (msg string) {
 	m.statsMutex.Lock()
 	defer m.statsMutex.Unlock()
+
+	canUse := "正常访问"
+	if !m.lastLive {
+		canUse = "无法访问"
+	}
+
 	return fmt.Sprintf(
-		"主机：%v\n地址：%v\n类型：%v\n成功：%v次\n失败：%v次\n",
+		"主机：%v\n地址：%v\n类型：%v\n成功：%v次\n失败：%v次\n状态：%v\n",
 		m.w.Name(),
 		m.w.Host(),
 		m.w.WatchType(),
 		m.successedCount,
 		m.failedCount,
+		canUse,
 	)
 }
 
